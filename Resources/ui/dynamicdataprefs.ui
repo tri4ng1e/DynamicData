@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>267</width>
-    <height>125</height>
+    <height>142</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -142,6 +142,24 @@
        </property>
        <property name="prefPath" stdset="0">
         <cstring>Mod/DynamicData</cstring>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="Label2">
+       <property name="text">
+        <string>Default container name: </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="DefaultDDName">
+       <property name="text">
+        <string>var</string>
        </property>
       </widget>
      </item>

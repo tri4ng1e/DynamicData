@@ -163,6 +163,7 @@ class DynamicDataSettingsCommandClass(object):
             self.form.AddToActiveContainer.setChecked(self.pg.GetBool('AddToActiveContainer', False))
             self.form.AddToFreeCADPreferences.setChecked(self.pg.GetBool("AddToFreeCADPreferences",True))
             self.form.mruLength.setValue(self.pg.GetInt('mruLength', 5))
+            self.form.DefaultDDName.setText(self.pg.GetString('defaultDDName', self.pg.GetString("defaultDDName",'dd')))
 
         def closeEvent(self, event):
             self.pg.SetBool('KeepToolbar', self.form.KeepToolbar.isChecked())
@@ -170,6 +171,7 @@ class DynamicDataSettingsCommandClass(object):
             self.pg.SetBool('AddToActiveContainer', self.form.AddToActiveContainer.isChecked())
             self.pg.SetBool('AddToFreeCADPreferences',self.form.AddToFreeCADPreferences.isChecked())
             self.pg.SetInt('mruLength', self.form.mruLength.value())
+            self.pg.SetString('defaultDDName', self.form.DefaultDDName.text())
             super(DynamicDataSettingsCommandClass.DynamicDataSettingsDlg, self).closeEvent(event)
 
     def __init__(self):
@@ -198,6 +200,8 @@ class DynamicDataSettingsCommandClass(object):
 class DynamicDataCreateObjectCommandClass(object):
     """Create Object command"""
 
+    pg = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/DynamicData")
+
     def GetResources(self):
         return {'Pixmap'  : os.path.join( iconPath , 'CreateObject.svg'),
                 'MenuText': "&Create Object",
@@ -207,7 +211,7 @@ class DynamicDataCreateObjectCommandClass(object):
     def Activated(self):
         doc = FreeCAD.ActiveDocument
         doc.openTransaction("CreateObject")
-        a = doc.addObject("App::FeaturePython","dd")
+        a = doc.addObject("App::FeaturePython", self.pg.GetString('defaultDDName', 'dd'))
         a.addProperty("App::PropertyStringList","DynamicData").DynamicData=self.getHelp()
         setattr(a.ViewObject,'DisplayMode',['0']) #avoid enumeration -1 warning
         doc.commitTransaction()
