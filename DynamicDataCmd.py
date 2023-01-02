@@ -253,7 +253,7 @@ class MultiTextInput(QtGui.QDialog):
         self.listWidget.currentItemChanged.connect(self.onListWidgetCurrentItemChanged)
         self.label2 = QtGui.QLabel(self)
         self.label2.setStyleSheet('color: red')
-        self.nameLabel = QtGui.QLabel("Name: dd")
+        self.nameLabel = QtGui.QLabel("Name: ")
         self.nameEdit = QtGui.QLineEdit(self)
         self.nameEdit.textChanged.connect(self.on_text_changed)
         self.valueLabel = QtGui.QLabel("Value: ")
@@ -313,14 +313,14 @@ class MultiTextInput(QtGui.QDialog):
         #    self.label2.setText(str(result))
 
     def on_text_changed(self):
-        cur = self.nameEdit.text()
-        if len(cur) == 1:
-            cur = cur.upper()
-        elif len(cur) > 1:
-            cur = cur[0].upper() + cur[1:]
-        else:
-            return
-        self.nameEdit.setText(cur)
+        # cur = self.nameEdit.text()
+        # if len(cur) == 1:
+        #     cur = cur.upper()
+        # elif len(cur) > 1:
+        #     cur = cur[0].upper() + cur[1:]
+        # else:
+        #     return
+        # self.nameEdit.setText(cur)
         self.on_edit_finished()
 
     def on_edit_finished(self):
@@ -350,7 +350,7 @@ class MultiTextInput(QtGui.QDialog):
             self.valueEdit.setEnabled(True)
             self.tooltipEdit.setEnabled(True)
             propertyName = self.nameEdit.text()
-        if hasattr(self.obj,'dd'+propertyName):
+        if hasattr(self.obj,propertyName):
             self.label2.setText('Property name already exists')
         else:
             self.label2.setText('')
@@ -409,12 +409,12 @@ class DynamicDataAddPropertyCommandClass(object):
         for ii in range(1,1000):
             vals.append(str(ii))
         idx = 0
-        while hasattr(obj,'dd' + item + str(vals[idx])):
+        while hasattr(obj,item + str(vals[idx])):
             idx += 1
         item + str(vals[idx])
         dlg.nameEdit.setText(item + vals[idx])
 
-        if hasattr(obj,'dd'+ item + vals[idx]):
+        if hasattr(obj, item + vals[idx]):
             dlg.label2.setText('Property name already exists')
         else:
             dlg.label2.setText('')
@@ -457,10 +457,6 @@ class DynamicDataAddPropertyCommandClass(object):
         if len(self.propertyName)==0:
             self.propertyName=';;;' #use defaults
 
-        if 'dd' in self.propertyName[:2] or 'Dd' in self.propertyName[:2]:
-            self.propertyName = self.propertyName[2:] #strip dd temporarily
-        cap = lambda x: x[0].upper() + x[1:] #credit: PradyJord from stackoverflow for this trick
-        self.propertyName = cap(self.propertyName) #capitalize first character to add space between dd and self.propertyName
         self.tooltip='['+item+'] ' #e.g. [Float]
         val=None
         vals=[]
@@ -494,14 +490,14 @@ class DynamicDataAddPropertyCommandClass(object):
                     except Exception as ex:
                         FreeCAD.Console.PrintError(f"dd: {ex}\n")
                         vals.append(split[ii])
-        if hasattr(obj,'dd'+self.propertyName):
-            FreeCAD.Console.PrintError('DynamicData: Unable to add property: dd'+self.propertyName+' because it already exists.\n')
+        if hasattr(obj,self.propertyName):
+            FreeCAD.Console.PrintError('DynamicData: Unable to add property: '+self.propertyName+' because it already exists.\n')
             return
-        p = obj.addProperty('App::Property'+item,'dd'+self.propertyName,str(self.groupName),self.tooltip)
+        p = obj.addProperty('App::Property'+item,self.propertyName,str(self.groupName),self.tooltip)
         if hasVal and len(vals)==0:
             if val[0] == "=":
                 try:
-                    obj.setExpression('dd'+self.propertyName, val[1:])
+                    obj.setExpression(self.propertyName, val[1:])
                     obj.touch()
                     doc.recompute()
                     doc.commitTransaction()
@@ -521,17 +517,17 @@ class DynamicDataAddPropertyCommandClass(object):
                 if item == "Enumeration":
                     list2 = split[3:]
                     try:
-                        setattr(p,'dd'+self.propertyName, list2)
+                        setattr(p,self.propertyName, list2)
                     except Exception:
                         FreeCAD.Console.PrintWarning("DynamicData: Unable to set list enumeration: "+str(list)+"\n")
                 else:
-                    setattr(p,'dd'+self.propertyName,atr)
+                    setattr(p,self.propertyName,atr)
             except:
                 FreeCAD.Console.PrintWarning('DynamicData: Unable to set attribute: '+str(val)+'\n')
         elif hasVal and len(vals)>0:
             if listval:
                 try:
-                    obj.setExpression('dd'+self.propertyName, listval[1:]) #[1:] strips the "="
+                    obj.setExpression(self.propertyName, listval[1:]) #[1:] strips the "="
                     obj.touch()
                     doc.recompute()
                     doc.commitTransaction()
@@ -541,7 +537,7 @@ class DynamicDataAddPropertyCommandClass(object):
                     doc.commitTransaction()
                     return
             try:
-                setattr(p,'dd'+self.propertyName,list(vals))
+                setattr(p,self.propertyName,list(vals))
             except:
                 FreeCAD.Console.PrintWarning('DynamicData: Unable to set list attribute: '+str(vals)+'\n')
         obj.touch()
@@ -897,28 +893,34 @@ class DynamicDataRenamePropertyCommandClass(object):
         prop = self.getProperty(obj) #string name of property
         if not prop:
             return
+
         outExpr = self.getOutExpr(obj, prop)
         if not outExpr:
             propval = getattr(obj, prop)
+
         newName = self.getNewPropertyName(obj, prop)
         if not newName:
             return
-        if not "dd" in newName[:2] or bool(newName[2:3] < "A" or newName[2:3] > "Z"):
-            FreeCAD.Console.PrintWarning("Not all dd commands will function properly if you don't follow the dd naming convention of ddUppercase\n")
-        inExprs = self.getInExprs(obj, prop)
+
         typeId = obj.getTypeIdOfProperty(prop)
-        docu = obj.getDocumentationOfProperty(prop)
         group = obj.getGroupOfProperty(prop)
-        obj.Document.openTransaction(f"DynamicData Rename {prop}")
+        docu = obj.getDocumentationOfProperty(prop)
+
+        obj.Document.openTransaction(f"DynamicData Rename {prop} property")
+
         obj.addProperty(typeId, newName, group, docu)
         if outExpr:
             obj.setExpression(newName, outExpr)
         else:
             setattr(obj, newName, propval)
+
+        inExprs = self.getInExprs(obj, prop)
         for inExpr in inExprs:
-            inExpr[0].setExpression(inExpr[1], inExpr[2].replace(prop,newName))
+            inExpr[0].setExpression(inExpr[1], inExpr[2].replace(obj.Name + '.' + prop, obj.Name + '.' + newName))
+
         obj.removeProperty(prop)
         obj.Document.commitTransaction()
+
         if obj in FreeCADGui.Selection.getSelection():
             FreeCADGui.Selection.removeSelection(obj)
             FreeCADGui.Selection.addSelection(obj)
@@ -1232,7 +1234,7 @@ You should save your document before proceeding.\n',items,0,False,windowFlags)
                     FreeCAD.Console.PrintError('DynamicData: please report: unknown property type error importing alias from spreadsheet ('+str(type(atr))+')\n')
                     continue
 
-                name = 'dd'+sheet.Label+'_'+cap(alias)
+                name = sheet.Label+'_'+cap(alias)
                 if not hasattr(dd,name): #avoid adding the same property again
                     dd.addProperty('App::Property'+propertyType,name,'Imported from: '+sheet.Label, propertyType)
                     setattr(dd,name,userString)
@@ -1316,29 +1318,29 @@ class DynamicDataImportNamedConstraintsCommandClass(object):
             return
 
         #sanity check
-        window = QtGui.QApplication.activeWindow()
-        items=["Do the import, I know what I\'m doing","Cancel"]
-        item,ok = QtGui.QInputDialog.getItem(window,'DynamicData: Sanity Check',
-'Warning: This will modify your sketch. \n\
-It will import the named constraints from the sketch and reset them to \n\
-point to the dd object.  After the import is done you should make changes \n\
-to the dd object property rather than to the constraint itself. \n\
-\n\
-All imports come in as values.\n\
-\n\
-For example: diameter=radius*2 imports as 10.0 mm, not as an expression radius*2\n\
-\n\
-For that reason, it might be necessary to rework some formulas in some cases \n\
-in order to maintain the parametricity of your model. \n\
-\n\
-This operation can be partially undone.  The sketch will be reset, but you will \n\
-still need to remove the newly created properties from the dd object.  The properties \n\
-will still be there, but they won\'t be linked to anything. \n\
-\n\
-You should save your document before proceeding\n',items,0,False,windowFlags)
-        if not ok or item==items[-1]:
-            return
-        FreeCAD.ActiveDocument.openTransaction("dd Import Constraints") #setup undo
+#         window = QtGui.QApplication.activeWindow()
+#         items=["Do the import, I know what I\'m doing","Cancel"]
+#         item,ok = QtGui.QInputDialog.getItem(window,'DynamicData: Sanity Check',
+# 'Warning: This will modify your sketch. \n\
+# It will import the named constraints from the sketch and reset them to \n\
+# point to the dd object.  After the import is done you should make changes \n\
+# to the dd object property rather than to the constraint itself. \n\
+# \n\
+# All imports come in as values.\n\
+# \n\
+# For example: diameter=radius*2 imports as 10.0 mm, not as an expression radius*2\n\
+# \n\
+# For that reason, it might be necessary to rework some formulas in some cases \n\
+# in order to maintain the parametricity of your model. \n\
+# \n\
+# This operation can be partially undone.  The sketch will be reset, but you will \n\
+# still need to remove the newly created properties from the dd object.  The properties \n\
+# will still be there, but they won\'t be linked to anything. \n\
+# \n\
+# You should save your document before proceeding\n',items,0,False,windowFlags)
+#         if not ok or item==items[-1]:
+#             return
+        FreeCAD.ActiveDocument.openTransaction("DynamicData Import Constraints") #setup undo
         constraints=[]
         for sketch in sketches:
             for con in sketch.Constraints:
@@ -1367,13 +1369,16 @@ You should save your document before proceeding\n',items,0,False,windowFlags)
             if con['constraintType']=='Angle':
                 propertyType="Angle"
                 value *= (180.0/math.pi)
-            name = 'dd'+con['sketchLabel']+cap(con['constraintName'])
+            name = con['sketchLabel']+cap(con['constraintName'])
             if not hasattr(dd,name): #avoid adding the same property again
-                dd.addProperty('App::Property'+propertyType,name,'Imported from:'+con['sketchLabel'],'['+propertyType+'] constraint type: ['+con['constraintType']+']')
+                dd.addProperty('App::Property'+propertyType,name,'Import: '+con['sketchLabel'],'['+propertyType+'] constraint type: ['+con['constraintType']+']')
                 setattr(dd,name,value)
+                expr = sketch.getExpression('.Constraints.'+con['constraintName'])
+                if expr:
+                    dd.setExpression('.'+name, expr[1])
                 FreeCAD.Console.PrintMessage('DynamicData: adding property: '+name+' to DynamicData object\n')
                 sketch = con['sketch']
-                sketch.setExpression('Constraints.'+con['constraintName'], dd.Label+'.dd'+sketch.Label+cap(con['constraintName']))
+                sketch.setExpression('Constraints.'+con['constraintName'], dd.Label+'.'+sketch.Label+cap(con['constraintName']))
             else:
                 FreeCAD.Console.PrintWarning('DynamicData: skipping existing property: '+name+'\n')
         FreeCAD.ActiveDocument.commitTransaction()
@@ -1538,26 +1543,26 @@ class DynamicDataCopyPropertyCommandClass(object):
             for property in properties:
                 cap = lambda x: x[0].upper() + x[1:] #credit: PradyJord from stackoverflow for this trick
                 name = property['name']
-                if 'dd' in name[:2] or 'Dd' in name[:2]:
-                    name = name[2:]
-                name = 'dd'+cap(name)
+                # if 'dd' in name[:2] or 'Dd' in name[:2]:
+                #     name = name[2:]
+                # name = 'dd'+cap(name)
                 propertyType = property['type']
                 if not propertyType:
                     return #user canceled
                 name,ok=QtGui.QInputDialog.getText(window,'DynamicData','Enter the name for the new property\n',text=name, flags=windowFlags)
-                if 'dd' in name[:2] or 'Dd' in name[:2]:
-                    name = name[2:]
+                # if 'dd' in name[:2] or 'Dd' in name[:2]:
+                #     name = name[2:]
                 if not ok:
                     return
-                name = 'dd'+cap(name)
+                # name = 'dd'+cap(name)
                 while hasattr(toObj,name):
                     name,ok=QtGui.QInputDialog.getText(window,'DynamicData','A property with that name already exists.  \n\
 Enter the name for the new property\n',text=name, flags=windowFlags)
                     if not ok:
                         return
-                    if 'dd' in name[:2] or 'Dd' in name[:2]:
-                        name = name[2:]
-                    name = 'dd'+cap(name)
+                    # if 'dd' in name[:2] or 'Dd' in name[:2]:
+                    #     name = name[2:]
+                    # name = 'dd'+cap(name)
                 doc.openTransaction("DynamicData CopyProperty")
                 try:
                     toObj.addProperty('App::Property'+propertyType.replace('(ViewObject)',''), name,'Copied from: '+fromObj.Label,'['+propertyType+']')
