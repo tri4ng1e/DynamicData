@@ -1067,6 +1067,18 @@ class DynamicDataRemovePropertyCommandClass(object):
             isSo = False
         return isSo
 
+    def getInExprs(self, obj, prop):
+        """get the incoming expressions bound to this property
+           returns a list of tuples in the form: [(object, propertyname, expression),]
+        """
+        inExprs = []
+        inobjs = [o for o in obj.InList]
+        for inobj in inobjs:
+            for expr in inobj.ExpressionEngine:
+                if prop in expr[1]:
+                    inExprs.append(tuple([inobj, expr[0], expr[1]]))
+        return inExprs
+
     def Activated(self):
         doc = FreeCAD.ActiveDocument
         selection = Gui.Selection.getSelection()
@@ -1079,7 +1091,11 @@ class DynamicDataRemovePropertyCommandClass(object):
         obj.Document.openTransaction("DynamicData Remove properties")
         for item in items:
             try:
+                tmp = obj.getPropertyByName(item).toStr()
+                inExprs = self.getInExprs(obj, item)
                 obj.removeProperty(item)
+                for inExpr in inExprs:
+                    inExpr[0].setExpression(inExpr[1], tmp)
             except Exception as ex:
                 FreeCAD.Console.PrintError(f"DynamicData::Exception cannot remove {item}\n{ex}")
         obj.Document.commitTransaction()
